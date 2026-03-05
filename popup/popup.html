@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FUCookies</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <img src="../icons/icon48.png" alt="FUCookies extension icon" class="logo" width="24" height="24">
+    <h1>FUCookies</h1>
+  </div>
+
+  <div class="current-site">
+    <div class="site-row">
+      <span class="site-name" id="site-name">—</span>
+      <span class="badge" id="badge">Active</span>
+    </div>
+    <button class="toggle-btn" id="toggle-btn">Add Exception</button>
+  </div>
+
+  <div class="exceptions-section">
+    <p class="section-label">Exceptions</p>
+    <ul class="exceptions-list" id="exceptions-list">
+      <li class="empty" id="empty-msg">No exceptions added</li>
+    </ul>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
