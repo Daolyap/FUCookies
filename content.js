@@ -1,0 +1,145 @@
+(function () {
+  const hostname = location.hostname.replace(/^www\./, '');
+
+  chrome.storage.sync.get({ exceptions: [] }, ({ exceptions }) => {
+    if (exceptions.some(e => hostname === e || hostname.endsWith('.' + e))) return;
+    init();
+  });
+
+  function init() {
+    if (window === window.top) {
+      injectTCFBlock();
+    }
+    tryReject();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryReject, { once: true });
+    }
+    const observer = new MutationObserver(debounce(tryReject, 250));
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    setTimeout(() => observer.disconnect(), 20000);
+  }
+
+  function injectTCFBlock() {
+    const s = document.createElement('script');
+    s.textContent = `(function(){
+      var rejectConsent = {
+        purpose: { consents: {}, legitimateInterests: {} },
+        vendor: { consents: {}, legitimateInterests: {} },
+        specialFeatureOptins: {}
+      };
+      function createHandler() {
+        return function(cmd, version, callback) {
+          if (typeof callback === 'function') {
+            callback(Object.assign({ gdprApplies: true, cmpStatus: 'loaded', eventStatus: 'useractioncomplete', isLoaded: true, tcfPolicyVersion: 2 }, rejectConsent), true);
+          }
+        };
+      }
+      var _tcfapi;
+      Object.defineProperty(window, '__tcfapi', {
+        get: function() { return _tcfapi; },
+        set: function() { _tcfapi = createHandler(); },
+        configurable: true
+      });
+      var _cmp;
+      Object.defineProperty(window, '__cmp', {
+        get: function() { return _cmp; },
+        set: function() { _cmp = createHandler(); },
+        configurable: true
+      });
+    })();`;
+    (document.head || document.documentElement).prepend(s);
+    s.remove();
+  }
+
+  const SELECTORS = [
+    '#CybotCookiebotDialogBodyButtonDecline',
+    '#onetrust-reject-all-handler',
+    '.ot-pc-refuse-all-handler',
+    '#didomi-notice-disagree-button',
+    '.didomi-continue-without-agreeing',
+    '.qc-cmp2-summary-buttons .qc-cmp2-secondary-button',
+    '#truste-consent-required',
+    '.pdynamicbutton a.call',
+    '.osano-cm-denyAll',
+    '.cky-btn-reject',
+    '[data-testid="uc-deny-all-button"]',
+    '.t-declineButton',
+    '.gdpr-cookie-notice-decline',
+    '#cookie-notice-decline',
+    '.cmplz-deny',
+    '#cookiescript_reject',
+    '.iubenda-cs-reject-btn',
+    '.cc-deny',
+    '[aria-label="Reject all" i]',
+    '[data-action="reject-all"]',
+    '#reject-all',
+    '.reject-all',
+    '#rejectAll',
+    '.rejectAll',
+  ];
+
+  const REJECT_PHRASES = [
+    'reject all',
+    'decline all',
+    'refuse all',
+    'deny all',
+    'disagree',
+    'reject cookies',
+    'decline cookies',
+    'no, thanks',
+    'no thanks',
+  ];
+
+  function tryReject() {
+    clickBySelector() || clickByText() || uncheckOptional();
+  }
+
+  function clickBySelector() {
+    for (const sel of SELECTORS) {
+      const el = document.querySelector(sel);
+      if (el && visible(el)) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function clickByText() {
+    const candidates = document.querySelectorAll('button, [role="button"], a');
+    for (const el of candidates) {
+      const text = el.textContent.trim().toLowerCase();
+      if (REJECT_PHRASES.includes(text) && visible(el)) {
+        el.click();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function uncheckOptional() {
+    let changed = false;
+    document.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)').forEach(cb => {
+      const labelEl = cb.id ? document.querySelector(`label[for="${cb.id}"]`) : null;
+      const labelText = labelEl ? labelEl.textContent : '';
+      const attrs = (cb.name + ' ' + cb.id + ' ' + (cb.getAttribute('aria-label') || '') + ' ' + labelText).toLowerCase();
+      if (!/(necessary|required|essential|strictly)/.test(attrs)) {
+        cb.click();
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
+  function visible(el) {
+    const r = el.getBoundingClientRect();
+    if (!r.width && !r.height) return false;
+    const s = getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0';
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+  }
+})();
