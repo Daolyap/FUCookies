@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Automatically rejects cookie consent on all sites. Add exceptions for sites you trust.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js"
   },

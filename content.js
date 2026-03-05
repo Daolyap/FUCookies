@@ -120,7 +120,8 @@
   function uncheckOptional() {
     let changed = false;
     document.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)').forEach(cb => {
-      const labelEl = cb.id ? document.querySelector(`label[for="${cb.id}"]`) : null;
+      const escapedId = cb.id && typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(cb.id) : cb.id;
+      const labelEl = cb.id ? document.querySelector(`label[for="${escapedId}"]`) : null;
       const labelText = labelEl ? labelEl.textContent : '';
       const attrs = (cb.name + ' ' + cb.id + ' ' + (cb.getAttribute('aria-label') || '') + ' ' + labelText).toLowerCase();
       if (!/(necessary|required|essential|strictly)/.test(attrs)) {
@@ -135,7 +136,8 @@
     const r = el.getBoundingClientRect();
     if (!r.width && !r.height) return false;
     const s = getComputedStyle(el);
-    return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0';
+    const opacity = parseFloat(s.opacity);
+    return s.display !== 'none' && s.visibility !== 'hidden' && (isNaN(opacity) || opacity > 0);
   }
 
   function debounce(fn, ms) {

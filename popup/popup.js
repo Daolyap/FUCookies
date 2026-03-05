@@ -4,14 +4,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('site-name').textContent = hostname || '(unsupported page)';
 
+  const toggleBtn = document.getElementById('toggle-btn');
+  if (!hostname) {
+    toggleBtn.disabled = true;
+  }
+
   const { exceptions = [] } = await chrome.storage.sync.get({ exceptions: [] });
   updateStatus(hostname, exceptions);
   renderList(exceptions);
 
-  document.getElementById('toggle-btn').addEventListener('click', async () => {
+  toggleBtn.addEventListener('click', async () => {
+    if (!hostname) return;
     const { exceptions: exc = [] } = await chrome.storage.sync.get({ exceptions: [] });
-    const updated = exc.includes(hostname)
-      ? exc.filter(e => e !== hostname)
+    const match = matchingException(hostname, exc);
+    const updated = match
+      ? exc.filter(e => e !== match)
       : [...exc, hostname];
     await chrome.storage.sync.set({ exceptions: updated });
     updateStatus(hostname, updated);
@@ -27,8 +34,16 @@ function extractHostname(url) {
   }
 }
 
+function isExcepted(hostname, exceptions) {
+  return exceptions.some(e => hostname === e || hostname.endsWith('.' + e));
+}
+
+function matchingException(hostname, exceptions) {
+  return exceptions.find(e => hostname === e || hostname.endsWith('.' + e));
+}
+
 function updateStatus(hostname, exceptions) {
-  const active = !exceptions.includes(hostname);
+  const active = !hostname || !isExcepted(hostname, exceptions);
   const badge = document.getElementById('badge');
   const btn = document.getElementById('toggle-btn');
   badge.textContent = active ? 'Active' : 'Excepted';
